@@ -5,7 +5,7 @@ export const View = () => {
 
   return (
     <>
-      <h1>Home</h1>
+      <h1>Item</h1>
       <button onClick={() => setCount(count + 1)}>{count}</button>
     </>
   )

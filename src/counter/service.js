@@ -1,6 +1,6 @@
 export const Service = () => {
   return { 
-    message: 'Hola desde el backend!',
+    message: 'From counter!',
     timestamp: new Date().toISOString()
   }
 }
