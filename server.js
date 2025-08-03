@@ -1,8 +1,34 @@
 import express from 'express';
 
-export default async function buildRouter(routes) {
+export default async function buildRouter(routes = {}, middlewares = {}) {
   const router = express.Router();
   
+  await Promise.all(
+    Object.entries(middlewares).map(async ([path, file]) => {
+      try {
+        const mod = await import(/* @vite-ignore */ file);
+
+        if (typeof mod.Middleware !== 'function') {
+          console.error(`Middleware handler not found in ${file}`);
+          return;
+        }
+
+        router.use(path, (req, res, next) => {
+          try {
+            mod.Middleware(req, res, next);
+          } catch (err) {
+            console.error(`Error in middleware ${path}:`, err);
+            if (!res.headersSent) {
+              res.status(500).json({ error: 'Internal Server Error in middleware' });
+            }
+          }
+        });
+      } catch (err) {
+        console.error('Error importing middleware', path, file, err);
+      }
+    })
+  );
+
   await Promise.all(
     Object.entries(routes).map(async ([path, file]) => {
       try {
@@ -10,20 +36,14 @@ export default async function buildRouter(routes) {
 
         router.all(path, async (req, res) => {
           try {
-            if (typeof mod.Request !== 'function') {
-              throw new Error(`Request handler not found in ${file}`);
-            }
+            if (typeof mod.Rest !== 'function') throw new Error(`Rest handler not found in ${file}`);
             
-            const result = await mod.Request(req, res);
-            if (result && !res.headersSent) {
-              res.json(result);
-            }
+            const result = await mod.Rest(req, res);
+            if (result && !res.headersSent) res.json(result);
           } catch (err) {
             console.error(`Error in route ${path}:`, err);
             if (!res.headersSent) {
-              res.status(err.status || 500).json({ 
-                error: err.message || 'Internal Server Error' 
-              });
+              res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
             }
           }
         });

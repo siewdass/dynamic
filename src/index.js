@@ -1,6 +1,4 @@
-export const Request = async (req, res) => {
-  return { 
-    message: 'From homex!',
-    timestamp: new Date().toISOString()
-  }
+export const Middleware = async (req, res, next) => {
+  console.log(`Middleware ${req.url}`)
+  next()
 }

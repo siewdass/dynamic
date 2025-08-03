@@ -2,30 +2,27 @@ import React, { lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-const routing = async () => {
-  const files = import.meta.glob('./src/**/*.{jsx,tsx}', { eager: true });
-  let routes = Object.entries(files)
-    .filter(([_, module]) => typeof module.View === 'function')
-    .reduce((manifest, [path]) => {
-      const cleanName = path
-        .replace(/^\.{0,2}\/src/, '')
-        .replace(/(?:\/index)?\.(tsx|jsx)$/, '')
-        .replace(/\[([^\]]+)]/g, ':$1')
-        .replace(/\/+$/, '')
-        .replace('index', '')
-        .toLowerCase() || '/';
-      
-      manifest[cleanName] = path
-      return manifest;
-    }, {});
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 
+const RemoveTrailingSlash = (props) => {
   if (process.env.NODE_ENV === 'production') {
-    const response = await fetch('/manifest.json');
-    const { client } = await response.json();
-    routes = client.routes
+    Object.entries(import.meta.glob('./src/**/*.{jsx,tsx}', { eager: true }))
   }
 
-  return routes;
+  const location = useLocation();
+
+  if (location.pathname.match(/\/+$/)) {
+    return React.createElement(Navigate, {
+      replace: true,
+      to: {
+        pathname: location.pathname.replace(/\/+$/, ''),
+        search: location.search,
+      },
+      ...props,
+    });
+  }
+
+  return null;
 };
 
 const createLazyElement = (importPath) => {
@@ -43,10 +40,17 @@ const createLazyElement = (importPath) => {
             throw new Error(`Componente View no encontrado en ${importPath}`);
           }
 
-          const View =
-            process.env.NODE_ENV === 'development' ? module.View : module._.View;
+          const View = process.env.NODE_ENV === 'development' ? module.View : module._.View;
 
-          return { default: View };
+          const Wrapped = () => {
+            const location = useLocation();
+            const params = useParams();
+            const navigate = useNavigate();
+            
+            return React.createElement(View, { location, params, navigate });
+          };
+
+          return { default: Wrapped };
         } catch (error) {
           console.error('Error loading component:', error);
           return { default: () => React.createElement('div', null, 'Error loading component') };
@@ -56,19 +60,26 @@ const createLazyElement = (importPath) => {
   );
 }
 
-const routes = Object.entries(await routing()).map(([path, file]) => {
+const r = window.__ROUTES__ || {}
+
+const routes = Object.entries(r).map(([path, file]) => {
   console.log(path,file)
   return { path, element: createLazyElement(file) };
 })
 
 const App = () => {
   return React.createElement(
-    Routes,
+    React.Fragment,
     null,
-    routes.map(({ path, element }) =>
-      React.createElement(Route, { key: path, path: path, element: element })
-    ),
-    React.createElement(Route, { path: "*", element: React.createElement(Navigate, { to: "/", replace: true }) })
+    React.createElement(RemoveTrailingSlash, null),
+    React.createElement(
+      Routes,
+      null,
+      routes.map(({ path, element }) =>
+        React.createElement(Route, { key: path, path, element })
+      ),
+      React.createElement(Route, { path: '*', element: React.createElement(Navigate, { to: '/', replace: true }) })
+    )
   );
 };
 
@@ -80,5 +91,3 @@ root.render(
     React.createElement(App, null)
   )
 );
-
-//export default {};

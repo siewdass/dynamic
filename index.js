@@ -14,7 +14,13 @@ async function bootstrap() {
       acc[route.replace(/^\/api/, '') || '/'] = path.join(__dirname, `server/${file}`)
       return acc;
     }, {})
-    const { express, router } = await serverModule.default(routes)
+    
+    const middlewares = Object.entries(manifest.server.middlewares).reduce((acc, [middleware, file]) => {
+      acc[middleware.replace(/^\/api/, '') || '/'] = path.join(__dirname, `server/${file}`)
+      return acc;
+    }, {})
+
+    const { express, router } = await serverModule.default(routes, middlewares)
     
     const app = express();
     app.use(express.json());
