@@ -1,13 +1,12 @@
 import path from 'path';
 import fs from 'fs'
+import https from 'https';
 
 const __dirname = path.dirname(process.argv[1]);
 
 async function bootstrap() {
-
-  const manifest = JSON.parse(fs.readFileSync(`${__dirname}/manifest.json`, 'utf-8'));
-  
   try {
+    const manifest = JSON.parse(fs.readFileSync(`${__dirname}/manifest.json`, 'utf-8'));
     const serverPath = path.join(__dirname, `server/${manifest.server.runtime}`);
     const serverModule = await import(serverPath);
     const routes = Object.entries(manifest.server.routes).reduce((acc, [route, file]) => {
@@ -29,23 +28,26 @@ async function bootstrap() {
 
     app.use(express.static(path.join(__dirname, 'client'), { redirect: false }))
 
-    app.get('/manifest.json', (req, res) => {
-      res.sendFile(path.join(__dirname, 'manifest.json'));
-    });
-
     app.get('*', (req, res) => {
       res.sendFile(path.join(__dirname, 'client', 'index.html'));
     });
 
-    const PORT = process.env.PORT || 5173;
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
+    const crt = process.env.CRT;
+    const key = process.env.KEY;
+
+    if (crt && key) {
+      https.createServer({ cert: crt, key: key }, app).listen(process.env.PORT, () => {
+        console.log(`HTTPS server running on port ${process.env.PORT}`);
+      });
+    } else {
+      app.listen(process.env.PORT, () => {
+        console.log(`HTTP server running on port ${process.env.PORT}`);
+      });
+    }
 
   } catch (e) {
     console.error(e)
   }
-
 }
 
 bootstrap()

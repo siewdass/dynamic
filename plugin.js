@@ -64,7 +64,7 @@ async function generateBundle(manifest, bundle, base = '') {
   }
 }
 
-export const vitePluginFullStack = ({ envPrefix = ['CLIENT_', 'SERVER_'] }) => {
+export const vitePluginFullStack = ({ envPrefix = ['CLIENT_', 'SERVER_'], build }) => {
   let manifest = { client: {}, server: {} }
 
   return [
@@ -197,6 +197,47 @@ export const vitePluginFullStack = ({ envPrefix = ['CLIENT_', 'SERVER_'] }) => {
       name: 'vite-plugin-fullstack-build',
       apply: 'build',
       async config() {
+        
+        const defineEnv = {
+          'process.env.PORT': build.port || 5173
+        };
+
+        if (build.crt && build.key) {
+          const crtPath = path.resolve(__dirname, build.crt);
+          const keyPath = path.resolve(__dirname, build.key);
+
+          if (fs.existsSync(crtPath) && fs.existsSync(keyPath)) {
+            defineEnv['process.env.CRT'] = JSON.stringify(fs.readFileSync(crtPath, 'utf-8'));
+            defineEnv['process.env.KEY'] = JSON.stringify(fs.readFileSync(keyPath, 'utf-8'));
+          }
+        }
+
+        await vite.build({
+          configFile: false,
+          publicDir: false,
+          ssr: {
+            noExternal: true,
+            external: [],
+            target: 'node',
+          },
+          define: defineEnv,
+          build: {
+            ssr: true,
+            emptyOutDir: true,
+            outDir: 'dist',
+            rollupOptions: {
+              external: [],
+              input: {
+                main: path.resolve(__dirname, 'index.js'),
+              },
+              output: {
+                format: 'cjs',
+                entryFileNames: 'main.js',
+              }
+            }
+          }
+        });
+
         const { entries } = await generateManifiest(/export\s+(const|function)\s+View\s*[=\(]/)
 
         return {
@@ -311,29 +352,6 @@ export const vitePluginFullStack = ({ envPrefix = ['CLIENT_', 'SERVER_'] }) => {
 
         const filePath = path.resolve('dist', 'manifest.json');
         fs.writeFileSync(filePath, JSON.stringify(manifest, null, 2))
-
-        await vite.build({
-          configFile: false,
-          ssr: {
-            noExternal: true,
-            external: [],
-            target: 'node',
-          },
-          build: {
-            ssr: true,
-            emptyOutDir: false,
-            outDir: 'dist',
-            rollupOptions: {
-              external: [],
-              input: 'index.js',
-              output: {
-                format: 'cjs',
-                entryFileNames: 'main.js',
-              }
-            }
-          }
-        });
-        
       }
     },
   ]
