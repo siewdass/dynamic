@@ -1,4 +1,6 @@
-export const Rest = async (req, res) => {
+import express from 'express'
+
+export const Rest = async (req) => {
   console.log('envs', import.meta.env)
 
   return { 

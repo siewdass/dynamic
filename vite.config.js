@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite'
-import { vitePluginFullStack } from './plugin'
+import WoveerRouting from 'woveer-routing'
 
 export default defineConfig({
   plugins: [
-    vitePluginFullStack({
+    WoveerRouting({
       build: {
         crt: './organization.crt',
         key: './private.key',

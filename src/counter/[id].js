@@ -1,6 +1,6 @@
 import { Service } from "./service"
 
-export const Rest = async (req, res) => {
+export const Rest = async (req) => {
   console.log(req.params)
   return Service()
 }
