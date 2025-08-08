@@ -1,6 +1,6 @@
-import { Service } from "./service"
+import { Service } from './service.js'
 
 export const Rest = async (req) => {
-  console.log(req.params)
-  return Service()
+	console.log(req.params)
+	return Service()
 }

@@ -1,15 +1,15 @@
 import { defineConfig } from 'vite'
-import WoveerRouting from 'woveer-routing'
+import WoveerVitePlugin from 'woveer-vite-plugin'
 
 export default defineConfig({
-  plugins: [
-    WoveerRouting({
-      build: {
-        crt: './organization.crt',
-        key: './private.key',
-        minify: false,
-        port: 5173,
-      }
-    })
-  ],
+	plugins: [
+		WoveerVitePlugin({
+			entry: {
+				client: './src/client.js',
+				server: './src/server.js'
+			},
+			prod: { port: 5173 },
+			dev: { port: 5173 }
+		})
+	],
 })
